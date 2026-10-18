@@ -1,0 +1,30 @@
+{
+  "mission": "QMOOSA-PQC-HYBRID-TLS-01",
+  "generatedAt": "2026-10-19T03:25:00Z",
+  "packages": [
+    {
+      "name": "@qmoosa/pqc-hybrid-tls-protocol",
+      "version": "1.0.0",
+      "repository": "elon00/qmoosa-pqc-hybrid-tls-protocol",
+      "sourceCommit": "f2e2a73688849190ee231bf887a2dbcc29324eda",
+      "archivePath": "packages/qmoosa-pqc-hybrid-tls-protocol-1.0.0.tgz",
+      "sha256": "9e6a3274a42dd233102d6e6a1998d83eef4c26d1f26cb6b0d8770e4ca477dda8"
+    },
+    {
+      "name": "@qmoosa/pqc-hybrid-tls-engine",
+      "version": "1.0.0",
+      "repository": "elon00/qmoosa-pqc-hybrid-tls-engine",
+      "sourceCommit": "093edcb6fa9d31e7aacaa75901a802686ab52ccc",
+      "archivePath": "packages/qmoosa-pqc-hybrid-tls-engine-1.0.0.tgz",
+      "sha256": "986c733e55c96a14dee72e377def79959064298977b3c2a0b399feb04c0a21da"
+    },
+    {
+      "name": "@qmoosa/pqc-hybrid-tls-sdk",
+      "version": "1.0.0",
+      "repository": "elon00/qmoosa-pqc-hybrid-tls-sdk",
+      "sourceCommit": "97a11a9e128a50bc52815716c80501f65f24e419",
+      "archivePath": "packages/qmoosa-pqc-hybrid-tls-sdk-1.0.0.tgz",
+      "sha256": "fc4dc07f6a5de37f7cac2c018da07792d58e14df063f6d17dad500fca5234d15"
+    }
+  ]
+}
