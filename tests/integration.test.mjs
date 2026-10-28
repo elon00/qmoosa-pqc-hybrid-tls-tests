@@ -15,7 +15,7 @@ import {
   bytesToHex
 } from '@qmoosa/pqc-hybrid-tls-sdk';
 
-test('Integration Reality: Full End-to-End Quantum-Safe Hybrid TLS 1.3 Handshake', () => {
+test('Archived SDK: raw hybrid key-exchange symmetry', () => {
   const client = new HybridTlsClient();
   const server = new HybridTlsServer();
 
@@ -57,7 +57,7 @@ test('Integration Reality: Full End-to-End Quantum-Safe Hybrid TLS 1.3 Handshake
   assert.ok(constantTimeEqual(clientKeys.serverTrafficSecret, serverKeys.serverTrafficSecret), 'Server traffic secrets must match');
 });
 
-test('Integration Reality: Multi-Message Bidirectional Record Layer Transport', () => {
+test('Archived SDK: bidirectional raw AEAD record round trips', () => {
   const client = new HybridTlsClient();
   const server = new HybridTlsServer();
 
@@ -88,7 +88,7 @@ test('Integration Reality: Multi-Message Bidirectional Record Layer Transport', 
   }
 });
 
-test('Integration Reality: High-Volume Payload Throughput over Hybrid TLS Record Channel', () => {
+test('Archived SDK: 16 KiB raw record round trip', () => {
   const client = new HybridTlsClient();
   const server = new HybridTlsServer();
 
