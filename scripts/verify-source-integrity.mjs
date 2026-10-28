@@ -1,136 +1,72 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const rootDir = path.resolve(__dirname, '..');
-const manifestPath = path.join(rootDir, 'integrity-manifest.json');
-
-if (!fs.existsSync(manifestPath)) {
-  console.error(`FATAL: integrity-manifest.json not found at ${manifestPath}`);
-  process.exit(1);
-}
-
-const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const modes = new Set(['all', 'archive', 'source', 'current-head']);
 const args = process.argv.slice(2);
-let mode = 'all';
-for (const arg of args) {
-  if (arg.startsWith('--mode=')) {
-    mode = arg.split('=')[1];
-  }
+if (args.length > 1 || (args.length && !args[0].startsWith('--mode='))) {
+  console.error('INTEGRITY_INPUT_ERROR: expected at most one --mode argument');
+  process.exit(2);
+}
+const mode = args.length ? args[0].slice('--mode='.length) : 'all';
+if (!modes.has(mode)) {
+  console.error(`INTEGRITY_INPUT_ERROR: unsupported mode ${mode}`);
+  process.exit(2);
 }
 
-console.log('================================================================');
-console.log('=== QMOOSA PQC HYBRID TLS SUPPLY-CHAIN INTEGRITY & PROVENANCE ===');
-console.log(`Mission:  ${manifest.mission}`);
-console.log(`Mode:     ${mode.toUpperCase()}`);
-console.log(`Manifest: Generated ${manifest.generatedAt}`);
-console.log('================================================================\n');
-
-let archiveIntegrityFailed = false;
-let sourceProvenanceFailed = false;
-let currentHeadFailed = false;
-
-// GATE 1: STRICT SHA-256 ARCHIVE CHECKSUM GATE
-if (mode === 'all' || mode === 'archive') {
-  console.log(`--- [GATE 1: ARCHIVE INTEGRITY VERIFICATION] ---`);
+try {
+  const manifest = JSON.parse(fs.readFileSync(path.join(rootDir, 'integrity-manifest.json'), 'utf8'));
+  if (!Array.isArray(manifest.packages) || manifest.packages.length === 0) throw new Error('manifest must contain at least one package');
+  const seen = new Set();
   for (const pkg of manifest.packages) {
-    const archiveFullPath = path.join(rootDir, pkg.archivePath);
-    if (!fs.existsSync(archiveFullPath)) {
-      console.error(`  [FAIL] Missing archive: ${pkg.archivePath}`);
-      archiveIntegrityFailed = true;
-      continue;
-    }
-
-    const fileBuffer = fs.readFileSync(archiveFullPath);
-    const calculatedHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
-
-    if (calculatedHash.toLowerCase() !== pkg.sha256.toLowerCase()) {
-      console.error(`  [FAIL] SHA-256 mismatch for ${pkg.name}@${pkg.version}`);
-      console.error(`         Expected: ${pkg.sha256}`);
-      console.error(`         Actual:   ${calculatedHash}`);
-      archiveIntegrityFailed = true;
-    } else {
-      console.log(`  [PASS] ${pkg.name}@${pkg.version} archive SHA-256 verified (${calculatedHash.substring(0, 16)}...)`);
+    if (!pkg || typeof pkg.name !== 'string' || seen.has(pkg.name) ||
+        typeof pkg.repository !== 'string' || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(pkg.repository) || pkg.repository.split('/').some(part => part === '.' || part === '..') ||
+        !/^[0-9a-f]{40}$/i.test(pkg.sourceCommit ?? '') ||
+        !/^[0-9a-f]{64}$/i.test(pkg.sha256 ?? '') ||
+        typeof pkg.archivePath !== 'string' || !pkg.archivePath || path.isAbsolute(pkg.archivePath)) throw new Error('malformed or duplicate package identity');
+    seen.add(pkg.name);
+    const relative = path.relative(rootDir, path.resolve(rootDir, pkg.archivePath));
+    if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) throw new Error('archive must stay inside the tests repository');
+    let current = rootDir;
+    for (const component of relative.split(path.sep)) {
+      current = path.join(current, component);
+      if (fs.existsSync(current) && fs.lstatSync(current).isSymbolicLink()) throw new Error('archive symlinks are not accepted');
     }
   }
-
-  if (archiveIntegrityFailed) {
-    console.error('\nRESULT: ARCHIVE_INTEGRITY_FAIL');
-    process.exit(1);
-  } else {
-    console.log('\nRESULT: ARCHIVE_INTEGRITY_PASS');
-  }
-}
-
-// GATE 2: SOURCE PROVENANCE ANCESTRY VERIFICATION
-if (mode === 'all' || mode === 'source') {
-  console.log(`\n--- [GATE 2: SOURCE PROVENANCE VERIFICATION] ---`);
-
-  for (const pkg of manifest.packages) {
-    const repoBaseName = pkg.repository.split('/')[1];
-    const siblingDir = path.resolve(rootDir, '..', repoBaseName);
-
-    if (!fs.existsSync(siblingDir)) {
-      console.warn(`  [SKIP] Local sibling repository ${siblingDir} not available; checking git ancestry skipped`);
-      continue;
+  let failed = false;
+  function gate(label, verify) {
+    let gateFailed = false;
+    for (const pkg of manifest.packages) {
+      try { verify(pkg); console.log(`[PASS] ${label}: ${pkg.name}`); }
+      catch (error) { gateFailed = true; console.error(`[FAIL] ${label}: ${pkg.name}: ${error.message}`); }
     }
-
-    try {
-      execSync(`git merge-base --is-ancestor ${pkg.sourceCommit} HEAD`, {
-        cwd: siblingDir,
-        stdio: 'pipe'
-      });
-      console.log(`  [PASS] ${pkg.repository} provenance established at ${pkg.sourceCommit.substring(0, 7)}`);
-    } catch (err) {
-      console.error(`  [FAIL] ${pkg.repository} commit ${pkg.sourceCommit} is not an ancestor of HEAD in ${siblingDir}`);
-      sourceProvenanceFailed = true;
-    }
+    console.log(`RESULT: ${label}_${gateFailed ? 'FAIL' : 'PASS'}`);
+    failed ||= gateFailed;
   }
-
-  if (sourceProvenanceFailed) {
-    console.error('\nRESULT: SOURCE_PROVENANCE_FAIL');
-    process.exit(1);
-  } else {
-    console.log('\nRESULT: SOURCE_PROVENANCE_PASS');
+  function sibling(pkg) {
+    const dir = path.resolve(rootDir, '..', pkg.repository.split('/')[1]);
+    if (!fs.existsSync(dir) || !fs.lstatSync(dir).isDirectory() || fs.lstatSync(dir).isSymbolicLink()) throw new Error('required sibling repository is unavailable');
+    const top = execFileSync('git', ['rev-parse', '--show-toplevel'], { cwd: dir, encoding: 'utf8', timeout: 10000 }).trim();
+    if (fs.realpathSync(top) !== fs.realpathSync(dir)) throw new Error('sibling is not a checkout root');
+    return dir;
   }
-}
-
-// GATE 3: STRICT CURRENT-HEAD ALIGNMENT GATE
-if (mode === 'all' || mode === 'current-head') {
-  console.log(`\n--- [GATE 3: CURRENT-HEAD ALIGNMENT VERIFICATION] ---`);
-
-  for (const pkg of manifest.packages) {
-    const repoBaseName = pkg.repository.split('/')[1];
-    const siblingDir = path.resolve(rootDir, '..', repoBaseName);
-
-    if (!fs.existsSync(siblingDir)) {
-      console.warn(`  [SKIP] Local sibling repository ${siblingDir} not found; skipping current-head alignment`);
-      continue;
-    }
-
-    try {
-      const currentCommit = execSync('git rev-parse HEAD', { cwd: siblingDir, stdio: 'pipe' }).toString().trim();
-      if (currentCommit.toLowerCase() !== pkg.sourceCommit.toLowerCase()) {
-        console.error(`  [FAIL] ${repoBaseName} HEAD mismatch!`);
-        console.error(`         Expected (pinned in manifest): ${pkg.sourceCommit}`);
-        console.error(`         Actual (in sibling repo):       ${currentCommit}`);
-        currentHeadFailed = true;
-      } else {
-        console.log(`  [PASS] ${repoBaseName} HEAD strictly aligned with manifest (${pkg.sourceCommit.substring(0, 7)})`);
-      }
-    } catch (err) {
-      console.error(`  [FAIL] Could not query git HEAD for ${siblingDir}`);
-      currentHeadFailed = true;
-    }
-  }
-
-  if (currentHeadFailed) {
-    console.error('\nRESULT: CURRENT_HEAD_ALIGNMENT_FAIL');
-    process.exit(1);
-  } else {
-    console.log('\nRESULT: CURRENT_HEAD_ALIGNMENT_PASS');
-  }
-}
+  console.log(`Mode: ${mode}`);
+  if (mode === 'all' || mode === 'archive') gate('ARCHIVE_INTEGRITY', pkg => {
+    const archive = path.resolve(rootDir, pkg.archivePath);
+    if (!fs.statSync(archive).isFile()) throw new Error('archive is not a regular file');
+    const actual = crypto.createHash('sha256').update(fs.readFileSync(archive)).digest('hex');
+    if (actual !== pkg.sha256.toLowerCase()) throw new Error('archive SHA-256 mismatch');
+  });
+  if (mode === 'all' || mode === 'source') gate('SOURCE_PROVENANCE', pkg => {
+    // Ancestry does not prove reproducible source-to-archive derivation.
+    execFileSync('git', ['merge-base', '--is-ancestor', pkg.sourceCommit, 'HEAD'], { cwd: sibling(pkg), stdio: 'pipe', timeout: 10000 });
+  });
+  if (mode === 'all' || mode === 'current-head') gate('CURRENT_HEAD_ALIGNMENT', pkg => {
+    const head = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: sibling(pkg), encoding: 'utf8', timeout: 10000 }).trim();
+    if (head.toLowerCase() !== pkg.sourceCommit.toLowerCase()) throw new Error('HEAD differs from recorded source commit');
+  });
+  process.exitCode = failed ? 1 : 0;
+} catch (error) { console.error(`INTEGRITY_INPUT_ERROR: ${error.message}`); process.exitCode = 2; }

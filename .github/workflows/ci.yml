@@ -1,84 +1,66 @@
-name: Full-Spectrum Post-Quantum Reality Gates & Invariant CI
+name: Pinned Hybrid TLS Validation
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
   reality-gates:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout tests repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           path: qmoosa-pqc-hybrid-tls-tests
-
-      - name: Checkout protocol repository (Pinned Commit)
-        uses: actions/checkout@v4
+          persist-credentials: false
+      - name: Checkout recorded protocol source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           repository: elon00/qmoosa-pqc-hybrid-tls-protocol
           ref: f2e2a73688849190ee231bf887a2dbcc29324eda
           path: qmoosa-pqc-hybrid-tls-protocol
-
-      - name: Checkout engine repository (Pinned Commit)
-        uses: actions/checkout@v4
+          persist-credentials: false
+      - name: Checkout recorded engine source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           repository: elon00/qmoosa-pqc-hybrid-tls-engine
           ref: 093edcb6fa9d31e7aacaa75901a802686ab52ccc
           path: qmoosa-pqc-hybrid-tls-engine
-
-      - name: Checkout sdk repository (Pinned Commit)
-        uses: actions/checkout@v4
+          persist-credentials: false
+      - name: Checkout recorded SDK source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           repository: elon00/qmoosa-pqc-hybrid-tls-sdk
           ref: 97a11a9e128a50bc52815716c80501f65f24e419
           path: qmoosa-pqc-hybrid-tls-sdk
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+          persist-credentials: false
+      - name: Set up pinned Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 20
-
-      - name: Install dependencies in sibling repositories
-        run: |
-          npm install --prefix qmoosa-pqc-hybrid-tls-protocol
-          npm install --prefix qmoosa-pqc-hybrid-tls-engine
-          npm install --prefix qmoosa-pqc-hybrid-tls-sdk
-
-      - name: Install dependencies in tests repository
+          node-version: '24.19.0'
+      - name: Run dependency-free provenance regressions
+        working-directory: qmoosa-pqc-hybrid-tls-tests
+        run: node --test --test-reporter=tap tests/provenance-gates.test.mjs
+      - name: Check recorded archive digests and source identities
         working-directory: qmoosa-pqc-hybrid-tls-tests
         run: |
-          rm -f package-lock.json
-          npm install --no-package-lock
-          mkdir -p node_modules/@qmoosa/pqc-hybrid-tls-protocol
-          mkdir -p node_modules/@qmoosa/pqc-hybrid-tls-engine
-          mkdir -p node_modules/@qmoosa/pqc-hybrid-tls-sdk
-          tar -xzf packages/qmoosa-pqc-hybrid-tls-protocol-1.0.0.tgz -C node_modules/@qmoosa/pqc-hybrid-tls-protocol --strip-components=1
-          tar -xzf packages/qmoosa-pqc-hybrid-tls-engine-1.0.0.tgz -C node_modules/@qmoosa/pqc-hybrid-tls-engine --strip-components=1
-          tar -xzf packages/qmoosa-pqc-hybrid-tls-sdk-1.0.0.tgz -C node_modules/@qmoosa/pqc-hybrid-tls-sdk --strip-components=1
-
-      - name: Run Source & Package Integrity Gate (Archive Mode)
+          npm run verify:archive
+          npm run verify:current-head
+          npm run verify:source
+      - name: Install only frozen dependencies without lifecycle scripts
+        run: |
+          npm ci --prefix qmoosa-pqc-hybrid-tls-protocol --ignore-scripts --no-audit --no-fund --engine-strict --registry=https://registry.npmjs.org
+          npm ci --prefix qmoosa-pqc-hybrid-tls-engine --ignore-scripts --no-audit --no-fund --engine-strict --registry=https://registry.npmjs.org
+          npm ci --prefix qmoosa-pqc-hybrid-tls-sdk --ignore-scripts --no-audit --no-fund --engine-strict --registry=https://registry.npmjs.org
+          npm ci --prefix qmoosa-pqc-hybrid-tls-tests --ignore-scripts --no-audit --no-fund --engine-strict --registry=https://registry.npmjs.org
+      - name: Run archived integration and negative-control suites
         working-directory: qmoosa-pqc-hybrid-tls-tests
-        run: npm run verify:archive
-
-      - name: Run Strict Current-HEAD Alignment Gate
-        working-directory: qmoosa-pqc-hybrid-tls-tests
-        run: npm run verify:current-head
-
-      - name: Run Hermetic Source Derivation & Canonical Artifact Comparison Gate
-        working-directory: qmoosa-pqc-hybrid-tls-tests
-        run: npm run verify:source
-
-      - name: Run Integration Tests
-        working-directory: qmoosa-pqc-hybrid-tls-tests
-        run: npm run test:integration
-
-      - name: Run Adversarial Negative Control Suite
-        working-directory: qmoosa-pqc-hybrid-tls-tests
-        run: npm run test:negative
-
-      - name: Static Lint Check
-        working-directory: qmoosa-pqc-hybrid-tls-tests
-        run: npm run lint
+        run: |
+          npm run test:integration
+          npm run test:negative
+          npm run lint

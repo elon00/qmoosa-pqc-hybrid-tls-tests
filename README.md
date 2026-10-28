@@ -17,3 +17,11 @@ Full-spectrum supply-chain integrity, source provenance, multi-repo integration,
 npm install
 npm test
 ```
+
+## Evidence limits
+
+The provenance gates fail if a required sibling checkout is missing or the selected mode is unknown. Archive mode checks recorded SHA-256 digests. Source mode checks Git ancestry; current-head mode checks exact recorded commit equality. These do not prove that the archives were reproducibly built from those sources. Frozen dependency installation and current engine/SDK compatibility remain separate acceptance gates.
+
+Run `node --test tests/provenance-gates.test.mjs` for the dependency-free regression suite. It uses temporary local Git checkouts and makes no external network calls.
+
+CI uses recorded action/source commits, exact Node 24.19.0 and frozen `npm ci --ignore-scripts` installs. Missing or broken locks fail visibly; the workflow no longer deletes lockfiles or manually replaces installed packages. Frozen archive dependency links and current authenticated-engine compatibility remain unresolved acceptance work.
