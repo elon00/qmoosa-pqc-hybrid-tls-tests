@@ -10,9 +10,10 @@
     "verify:archive": "node scripts/verify-source-integrity.mjs --mode=archive",
     "verify:source": "node scripts/verify-source-integrity.mjs --mode=source",
     "verify:current-head": "node scripts/verify-source-integrity.mjs --mode=current-head",
-    "test": "npm run test:provenance && npm run test:integrity && npm run test:integration && npm run test:negative",
+    "test": "npm run test:dependencies && npm run test:provenance && npm run test:integrity && npm run test:integration && npm run test:negative",
     "lint": "node --check tests/integration.test.mjs tests/negative-control.test.mjs scripts/verify-source-integrity.mjs",
-    "test:provenance": "node --test tests/provenance-gates.test.mjs"
+    "test:provenance": "node --test tests/provenance-gates.test.mjs",
+    "test:dependencies": "node --test tests/dependency-graph.test.mjs"
   },
   "dependencies": {
     "@qmoosa/pqc-hybrid-tls-protocol": "file:packages/qmoosa-pqc-hybrid-tls-protocol-1.0.0.tgz",
@@ -33,5 +34,10 @@
     "negative-controls"
   ],
   "author": "elon00",
-  "license": "MIT"
+  "license": "MIT",
+  "overrides": {
+    "@qmoosa/pqc-hybrid-tls-protocol": "$@qmoosa/pqc-hybrid-tls-protocol",
+    "@qmoosa/pqc-hybrid-tls-engine": "$@qmoosa/pqc-hybrid-tls-engine",
+    "@qmoosa/pqc-hybrid-tls-sdk": "$@qmoosa/pqc-hybrid-tls-sdk"
+  }
 }

@@ -25,3 +25,9 @@ The provenance gates fail if a required sibling checkout is missing or the selec
 Run `node --test tests/provenance-gates.test.mjs` for the dependency-free regression suite. It uses temporary local Git checkouts and makes no external network calls.
 
 CI uses recorded action/source commits, exact Node 24.19.0 and frozen `npm ci --ignore-scripts` installs. Missing or broken locks fail visibly; the workflow no longer deletes lockfiles or manually replaces installed packages. Frozen archive dependency links and current authenticated-engine compatibility remain unresolved acceptance work.
+
+## Frozen archive installation
+
+Root npm overrides resolve the engine/SDK transitive local dependencies to the same committed archives used directly by this test suite. Package archive bytes and recorded source commits are unchanged. The regenerated lock removes dangling nested links and preserves the existing registry package versions.
+
+Run `npm ci --ignore-scripts --no-audit --no-fund --engine-strict --registry=https://registry.npmjs.org`, then `npm run test:dependencies`. The complete `npm test` command also requires the recorded sibling source checkouts for provenance verification. No lockfile is deleted during CI. Passing these archive-level tests does not establish authenticated TLS transport, current consumer compatibility or production readiness.

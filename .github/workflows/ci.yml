@@ -58,6 +58,9 @@ jobs:
           npm ci --prefix qmoosa-pqc-hybrid-tls-engine --ignore-scripts --no-audit --no-fund --engine-strict --registry=https://registry.npmjs.org
           npm ci --prefix qmoosa-pqc-hybrid-tls-sdk --ignore-scripts --no-audit --no-fund --engine-strict --registry=https://registry.npmjs.org
           npm ci --prefix qmoosa-pqc-hybrid-tls-tests --ignore-scripts --no-audit --no-fund --engine-strict --registry=https://registry.npmjs.org
+      - name: Verify installed dependency graph
+        working-directory: qmoosa-pqc-hybrid-tls-tests
+        run: npm run test:dependencies
       - name: Run archived integration and negative-control suites
         working-directory: qmoosa-pqc-hybrid-tls-tests
         run: |

@@ -49,19 +49,21 @@ test('Negative Control 2: Bit Corruption in Classical X25519 Share Prevents Key 
   const corruptedServerShare = new Uint8Array(serverKeyShare);
   corruptedServerShare[10] ^= 0xaa;
 
+  let clientSession;
   try {
-    const clientSession = client.completeHandshake(corruptedServerShare);
-    const clientKeys = clientSession.getSessionKeys();
-    const serverKeys = serverSession.getSessionKeys();
-
-    assert.equal(
-      constantTimeEqual(clientKeys.clientTrafficSecret, serverKeys.clientTrafficSecret),
-      false,
-      'Corrupted X25519 key share must fail traffic secret agreement'
-    );
+    clientSession = client.completeHandshake(corruptedServerShare);
   } catch (err) {
-    assert.ok(err, 'Expected error on invalid curve point');
+    assert.ok(err instanceof Error, 'Malformed shares must be rejected with an error');
+    return;
   }
+  // Keep this assertion outside the catch: a failed assertion must fail the test.
+  const clientKeys = clientSession.getSessionKeys();
+  const serverKeys = serverSession.getSessionKeys();
+  assert.equal(
+    constantTimeEqual(clientKeys.clientTrafficSecret, serverKeys.clientTrafficSecret),
+    false,
+    'Corrupted X25519 key share must fail traffic secret agreement'
+  );
 });
 
 test('Negative Control 3: Truncated ClientKeyShare Wire Payload Rejected', () => {
