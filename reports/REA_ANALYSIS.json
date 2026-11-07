@@ -1,0 +1,59 @@
+{
+  "engine": "REA_Reverse_Engineer_Anything",
+  "status": "STRUCTURE_RECONSTRUCTED",
+  "analyzed_files": 17,
+  "manifest": {
+    "integrity-manifest.json": {
+      "bytes": 1230
+    },
+    "package-lock.json": {
+      "bytes": 3836
+    },
+    "package.json": {
+      "bytes": 1938
+    },
+    "README.md": {
+      "bytes": 2853
+    },
+    "packages\\qmoosa-pqc-hybrid-tls-engine-1.0.0.tgz": {
+      "bytes": 7577
+    },
+    "packages\\qmoosa-pqc-hybrid-tls-protocol-1.0.0.tgz": {
+      "bytes": 4364
+    },
+    "packages\\qmoosa-pqc-hybrid-tls-sdk-1.0.0.tgz": {
+      "bytes": 4548
+    },
+    "scripts\\rea_inspector.py": {
+      "bytes": 1485
+    },
+    "scripts\\rsi_engine.py": {
+      "bytes": 2039
+    },
+    "scripts\\verify-source-integrity.mjs": {
+      "bytes": 4339
+    },
+    "tests\\dependency-graph.test.mjs": {
+      "bytes": 2093
+    },
+    "tests\\integration.test.mjs": {
+      "bytes": 5034
+    },
+    "tests\\negative-control.test.mjs": {
+      "bytes": 10085
+    },
+    "tests\\provenance-gates.test.mjs": {
+      "bytes": 4114
+    },
+    "tests\\reality_check_harness.py": {
+      "bytes": 1250
+    },
+    ".github\\workflows\\ci.yml": {
+      "bytes": 3108
+    },
+    ".github\\workflows\\qmoosa-rsi-rea-sync.yml": {
+      "bytes": 531
+    }
+  },
+  "timestamp": 1794023987
+}
